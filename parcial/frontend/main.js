@@ -1,6 +1,6 @@
-// main.js - SPA para CrudDATABASE (Versión Películas)
+// main.js - SPA para CRUD de Películas (Versión Completa)
 
-const API_URL = 'http://localhost:5000'; 
+const API_URL = 'http://localhost:5000';
 let jwt = '';
 let userRole = '';
 let username = '';
@@ -15,12 +15,10 @@ function navBar() {
         links += `<a href="#" onclick="goTo('login')">Login</a>`;
         links += `<a href="#" onclick="goTo('register')">Registro</a>`;
     } else {
-        if (userRole === 'admin') {
-            links += `<a href="#" onclick="goTo('users')">Usuarios</a>`;
-        }
+        if (userRole === 'admin') links += `<a href="#" onclick="goTo('users')">Usuarios</a>`;
         links += `<a href="#" onclick="goTo('peliculas')">Películas</a>`;
         links += `<a href="#" onclick="logout()">Logout</a>`;
-        links += `<span style='margin-left:16px;color:#888;'>${username} (${userRole})</span>`;
+        links += `<span style="margin-left:16px;color:#888;">${username} (${userRole})</span>`;
     }
     return `<nav>${links}</nav>`;
 }
@@ -71,14 +69,10 @@ function login() {
         if (data.access_token) {
             jwt = data.access_token;
             username = user;
-
             try {
                 const payload = JSON.parse(atob(jwt.split('.')[1]));
                 userRole = payload.role || (payload.additional_claims?.role) || '';
-            } catch {
-                userRole = '';
-            }
-
+            } catch { userRole = ''; }
             goTo('peliculas');
         } else {
             document.getElementById('login-msg').innerHTML = showMessage(data.error || 'Error de login');
@@ -134,9 +128,7 @@ function loadUsers() {
             return;
         }
 
-        let html = `<table>
-            <tr><th>ID</th><th>Usuario</th><th>Rol</th><th>Acciones</th></tr>`;
-
+        let html = `<table><tr><th>ID</th><th>Usuario</th><th>Rol</th><th>Acciones</th></tr>`;
         data.forEach(u => {
             html += `<tr>
                 <td>${u.id}</td>
@@ -148,10 +140,8 @@ function loadUsers() {
                 </td>
             </tr>`;
         });
-
-        html += `</table>`;
-
-        html += `<h3>Crear usuario</h3>
+        html += `</table>
+        <h3>Crear usuario</h3>
         <form onsubmit="event.preventDefault(); createUser()">
             <input type="text" id="new-username" placeholder="Usuario" required />
             <input type="password" id="new-password" placeholder="Contraseña" required />
@@ -162,7 +152,6 @@ function loadUsers() {
             <button class="button" type="submit">Crear</button>
         </form>
         <div id="user-msg"></div>`;
-
         document.getElementById('users-list').innerHTML = html;
     });
 }
@@ -176,49 +165,49 @@ function createUser() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
         body: JSON.stringify({ username, password, role })
-    })
-    .then(() => loadUsers());
+    }).then(() => loadUsers());
 }
 
 function editUser(id, username) {
     const newUsername = prompt('Nuevo nombre de usuario:', username);
     if (!newUsername) return;
-
     const newPassword = prompt('Nueva contraseña (vacío para no cambiar):', '');
-
     fetch(`${API_URL}/users/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
         body: JSON.stringify({ username: newUsername, password: newPassword })
-    })
-    .then(() => loadUsers());
+    }).then(() => loadUsers());
 }
 
 function deleteUser(id) {
     if (!confirm('¿Seguro que quieres eliminar este usuario?')) return;
-
     fetch(`${API_URL}/users/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${jwt}` }
-    })
-    .then(() => loadUsers());
+    }).then(() => loadUsers());
 }
 
 /* PELÍCULAS */
 function loadPeliculas() {
     render(navBar() + '<h2>Películas</h2><div id="peliculas-list">Cargando...</div>');
 
-    fetch(`${API_URL}/peliculas`, {
-        headers: { 'Authorization': `Bearer ${jwt}` }
-    })
+    fetch(`${API_URL}/peliculas`, { headers: { 'Authorization': `Bearer ${jwt}` } })
     .then(r => r.json())
     .then(data => {
         let html = '';
-
         if (Array.isArray(data)) {
             if (data.length > 0) {
                 html += `<table>
-                <tr><th>ID</th><th>Título</th><th>Director</th><th>Año</th><th>Descripción</th><th>Acciones</th></tr>`;
+                    <tr>
+                        <th>ID</th>
+                        <th>Título</th>
+                        <th>Director</th>
+                        <th>Año</th>
+                        <th>Género</th>
+                        <th>Duración</th>
+                        <th>Descripción</th>
+                        <th>Acciones</th>
+                    </tr>`;
 
                 data.forEach(p => {
                     html += `<tr>
@@ -226,14 +215,15 @@ function loadPeliculas() {
                         <td>${p.titulo}</td>
                         <td>${p.director}</td>
                         <td>${p.anio}</td>
+                        <td>${p.genero}</td>
+                        <td>${p.duracion} min</td>
                         <td>${p.descripcion}</td>
                         <td>
-                            <button onclick="editPelicula(${p.id}, '${p.titulo}', '${p.director}', ${p.anio}, \`${p.descripcion}\`)">Editar</button>
+                            <button onclick="editPelicula(${p.id}, '${p.titulo}', '${p.director}', ${p.anio}, '${p.genero}', ${p.duracion}, \`${p.descripcion}\`)">Editar</button>
                             <button onclick="deletePelicula(${p.id})">Eliminar</button>
                         </td>
                     </tr>`;
                 });
-
                 html += `</table>`;
             } else {
                 html += `<div class="success">No hay películas registradas.</div>`;
@@ -247,6 +237,8 @@ function loadPeliculas() {
             <input type="text" id="new-titulo" placeholder="Título" required />
             <input type="text" id="new-director" placeholder="Director" required />
             <input type="number" id="new-anio" placeholder="Año" min="1800" max="2100" required />
+            <input type="text" id="new-genero" placeholder="Género" required />
+            <input type="number" id="new-duracion" placeholder="Duración (minutos)" min="1" required />
             <textarea id="new-descripcion" placeholder="Descripción" required></textarea>
             <button class="button" type="submit">Crear</button>
         </form>
@@ -260,26 +252,28 @@ function createPelicula() {
     const titulo = document.getElementById('new-titulo').value;
     const director = document.getElementById('new-director').value;
     const anio = parseInt(document.getElementById('new-anio').value);
+    const genero = document.getElementById('new-genero').value;
+    const duracion = parseInt(document.getElementById('new-duracion').value);
     const descripcion = document.getElementById('new-descripcion').value;
 
     fetch(`${API_URL}/peliculas`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${jwt}` },
-        body: JSON.stringify({ titulo, director, anio, descripcion })
-    })
-    .then(() => loadPeliculas());
+        body: JSON.stringify({ titulo, director, anio, genero, duracion, descripcion })
+    }).then(() => loadPeliculas());
 }
 
-function editPelicula(id, titulo, director, anio, descripcion) {
+function editPelicula(id, titulo, director, anio, genero, duracion, descripcion) {
     const newTitulo = prompt('Nuevo título:', titulo);
     if (newTitulo === null) return;
-
     const newDirector = prompt('Nuevo director:', director);
     if (newDirector === null) return;
-
     const newAnio = prompt('Nuevo año:', anio);
     if (newAnio === null) return;
-
+    const newGenero = prompt('Nuevo género:', genero);
+    if (newGenero === null) return;
+    const newDuracion = prompt('Nueva duración (minutos):', duracion);
+    if (newDuracion === null) return;
     const newDescripcion = prompt('Nueva descripción:', descripcion);
     if (newDescripcion === null) return;
 
@@ -290,20 +284,19 @@ function editPelicula(id, titulo, director, anio, descripcion) {
             titulo: newTitulo,
             director: newDirector,
             anio: parseInt(newAnio),
+            genero: newGenero,
+            duracion: parseInt(newDuracion),
             descripcion: newDescripcion
         })
-    })
-    .then(() => loadPeliculas());
+    }).then(() => loadPeliculas());
 }
 
 function deletePelicula(id) {
     if (!confirm('¿Seguro que quieres eliminar esta película?')) return;
-
     fetch(`${API_URL}/peliculas/${id}`, {
         method: 'DELETE',
         headers: { 'Authorization': `Bearer ${jwt}` }
-    })
-    .then(() => loadPeliculas());
+    }).then(() => loadPeliculas());
 }
 
 /* LOGOUT */
