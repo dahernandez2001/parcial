@@ -1,8 +1,6 @@
 from flask import Flask
 from config.database import Base, engine
-from models.producto_model import Producto
 from controllers.usuarios_controller import usuarios_bp, register_jwt_error_handlers
-from controllers.productos_controller import productos_bp
 from controllers.peliculas_controller import peliculas_bp
 try:
     from controllers.auth_controller import auth_bp
@@ -29,8 +27,7 @@ CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}}, allow_
 
 # Registrar blueprints
 app.register_blueprint(usuarios_bp)
-app.register_blueprint(productos_bp)
-app.register_blueprint(peliculas_bp)  # ← ESTE FALTABA
+app.register_blueprint(peliculas_bp)
 if auth_bp:
     app.register_blueprint(auth_bp)
 
